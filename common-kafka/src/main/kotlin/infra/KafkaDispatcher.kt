@@ -1,17 +1,21 @@
 package infra
 
+import model.CorrelationId
+import model.Message
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.serialization.StringSerializer
 import java.io.Closeable
 import java.util.*
+import java.util.concurrent.Future
 
-class KafkaDispatcher<T> : Closeable{
-    private val producer: KafkaProducer<String, T>
+class KafkaDispatcher<T> : Closeable {
+    private val producer: KafkaProducer<String, Message<T>>
 
     init {
-        this.producer = KafkaProducer<String, T>(properties())
+        this.producer = KafkaProducer<String, Message<T>>(properties())
     }
 
     private fun properties(): Properties {
@@ -24,16 +28,23 @@ class KafkaDispatcher<T> : Closeable{
         return properties
     }
 
-    fun dispatch(topic: String, key: String, value: T) {
+    fun dispatchAsync(topic: String, key: String, id: CorrelationId, payload: T): Future<RecordMetadata> {
+        val value = Message(id, payload)
         val record = ProducerRecord(topic, key, value)
-        producer.send(record) { data, ex ->
+        return producer.send(record) { data, ex ->
             if (ex != null) {
-                ex.printStackTrace();
+                println(ex.printStackTrace());
                 return@send
             }
             println("Sucesso enviando ${data.topic()}:::partition ${data.partition()} / offset ${data.offset()}")
-        }.get()
+        }
     }
+
+    fun dispatch(topic: String, key: String, id: CorrelationId, payload: T) {
+        val future = dispatchAsync(topic, key, id, payload)
+        future.get()
+    }
+
 
     override fun close() {
         println("========= Closing Dispatcher =========")

@@ -1,4 +1,5 @@
 import infra.KafkaService
+import model.Message
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
 fun main() {
@@ -9,10 +10,9 @@ fun main() {
 class EmailService {
 
     fun main() {
-        KafkaService(
+        KafkaService<Email>(
             groupId = EmailService::class.java.simpleName,
             topic = "ECOMMERCE_SEND_EMAIL",
-            type = Email::class.java,
             properties = mapOf(),
             consume = ::parse
         ).use {
@@ -20,7 +20,7 @@ class EmailService {
         }
     }
 
-    private fun parse(record: ConsumerRecord<String, Email>) {
+    private fun parse(record: ConsumerRecord<String, Message<Email>>) {
         println("Processing new order, checking for fraud")
         println(record.key())
         println(record.value())

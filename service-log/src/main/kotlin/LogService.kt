@@ -1,4 +1,5 @@
 import infra.KafkaService
+import model.Message
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -14,7 +15,6 @@ class LogService {
         KafkaService(
             groupId = LogService::class.java.simpleName,
             topic = Pattern.compile("ECOMMERCE.*"),
-            type = String::class.java,
             properties = mapOf(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java.name),
             consume = ::parse
         ).use {
@@ -22,8 +22,8 @@ class LogService {
         }
     }
 
-    private fun parse(record: ConsumerRecord<String, String>) {
-        println("LOG")
+    private fun parse(record: ConsumerRecord<String, Message<String>>) {
+        println("==========LOG==============")
         println(record.topic())
         println(record.key())
         println(record.value())

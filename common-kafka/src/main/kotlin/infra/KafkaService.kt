@@ -1,5 +1,6 @@
 package infra
 
+import model.Message
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -11,47 +12,60 @@ import java.util.regex.Pattern
 
 class KafkaService<T> private constructor(
     private val groupId: String,
-    private val consume: (record: ConsumerRecord<String, T>) -> Unit,
-    private val type: Class<T>,
+    private val consume: (ConsumerRecord<String, Message<T>>) -> Unit,
     private val properties: Map<String, String>
 ) : Closeable {
 
-    private var consumer: KafkaConsumer<String, T> = KafkaConsumer<String, T>(properties(type, properties))
+    private var consumer: KafkaConsumer<String, Message<T>> = KafkaConsumer<String, Message<T>>(properties(properties))
 
     constructor(
         groupId: String,
         topic: Pattern,
-        type: Class<T>,
         properties: Map<String, String>,
-        consume: (ConsumerRecord<String, T>) -> Unit
-    ) : this(groupId = groupId, type = type, properties = properties, consume = consume) {
+        consume: (ConsumerRecord<String, Message<T>>) -> Unit
+    ) : this(groupId = groupId, consume = consume, properties = properties) {
         consumer.subscribe(topic)
     }
 
     constructor(
         groupId: String,
         topic: String,
-        type: Class<T>,
         properties: Map<String, String>,
-        consume: (ConsumerRecord<String, T>) -> Unit
-    ) : this(groupId = groupId, type = type, properties = properties, consume = consume) {
+        consume: (ConsumerRecord<String, Message<T>>) -> Unit
+    ) : this(groupId = groupId, consume = consume, properties = properties) {
         consumer.subscribe(listOf(topic))
     }
 
     fun execute() {
-
-        while (true) {
-            val records = consumer.poll(Duration.ofMillis(100));
-            if (!records.isEmpty) {
-                println("Encontrei ${records.count()} registros")
-            }
-            for (record in records) {
-                this.consume(record)
+        KafkaDispatcher<String>().use { deadLetter ->
+            while (true) {
+                val records = consumer.poll(Duration.ofMillis(100));
+                if (!records.isEmpty) {
+                    println("Encontrei ${records.count()} registros")
+                }
+                for (record in records) {
+                    try {
+                        if (Math.random() > 0.8){
+                            throw RuntimeException("Causing exception to test deadletter")
+                        }
+                        this.consume(record)
+                    } catch (e: RuntimeException) {
+                        //so far, just logging
+                        e.printStackTrace()
+                        val message: Message<*> = record.value()
+                        deadLetter.dispatch(
+                            "ECOMMERCE_DEADLETTER",
+                            message.id.toString(),
+                            message.id.continueWith("DeadLetter"),
+                            GsonSerializer<Message<*>>().serialize("", message).toString()
+                        )
+                    }
+                }
             }
         }
     }
 
-    private fun properties(type: Class<T>, overrideProperties: Map<String, String>): Properties {
+    private fun properties(overrideProperties: Map<String, String>): Properties {
         val properties = Properties()
 
         properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092")
@@ -59,7 +73,6 @@ class KafkaService<T> private constructor(
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, GsonDeserializer::class.java.name)
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId)
         properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1")
-        properties.setProperty(GsonDeserializer.TYPE_CONFIG, type.name)
         properties.putAll(overrideProperties)
 
         return properties

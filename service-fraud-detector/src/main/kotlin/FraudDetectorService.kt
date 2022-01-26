@@ -1,4 +1,7 @@
+import infra.KafkaDispatcher
 import infra.KafkaService
+import model.CorrelationId
+import model.Message
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import java.math.BigDecimal
 import java.util.regex.Pattern
@@ -8,14 +11,14 @@ fun main() {
     fraudDetectorService.main()
 }
 
-
 class FraudDetectorService {
+
+    private val orderDispatcher = KafkaDispatcher<Order>()
 
     fun main() {
         KafkaService(
             groupId = FraudDetectorService::class.java.simpleName,
             topic = Pattern.compile("ECOMMERCE_NEW_ORDER"),
-            type = Order::class.java,
             properties = mapOf(),
             consume = ::parse
         ).use {
@@ -23,7 +26,8 @@ class FraudDetectorService {
         }
     }
 
-    private fun parse(record: ConsumerRecord<String, Order>) {
+    private fun parse(record: ConsumerRecord<String, Message<Order>>) {
+        println("------------------")
         println("Processing new order, checking for fraud")
         println(record.key())
         println(record.value())
@@ -36,11 +40,33 @@ class FraudDetectorService {
             // ignoring
             e.printStackTrace()
         }
+
+        val order = record.value().payload
+        if (isFraud(order)) {
+            //pretending that the fraud happens when the amount is >=400
+            println("Order is a fraud!!!!")
+            orderDispatcher.dispatch(
+                "ECOMMERCE_ORDER_REJECTED",
+                order.email,
+                CorrelationId(FraudDetectorService::class.java.simpleName),
+                order
+            )
+        } else {
+            println("Approved: $order")
+            orderDispatcher.dispatch(
+                "ECOMMERCE_ORDER_APPROVED",
+                order.email,
+                CorrelationId(FraudDetectorService::class.java.simpleName),
+                order
+            )
+        }
     }
+
+    private fun isFraud(order: Order) = order.amount >= BigDecimal("4500")
 }
 
 data class Order(
-    val userId: String,
+    val email: String,
     val orderId: String,
     val amount: BigDecimal
 )
