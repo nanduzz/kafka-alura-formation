@@ -1,4 +1,4 @@
-package infra
+package infra.dispatcher
 
 import model.CorrelationId
 import model.Message
@@ -29,7 +29,7 @@ class KafkaDispatcher<T> : Closeable {
     }
 
     fun dispatchAsync(topic: String, key: String, id: CorrelationId, payload: T): Future<RecordMetadata> {
-        val value = Message(id, payload)
+        val value = Message(id.continueWith("_$topic"), payload)
         val record = ProducerRecord(topic, key, value)
         return producer.send(record) { data, ex ->
             if (ex != null) {

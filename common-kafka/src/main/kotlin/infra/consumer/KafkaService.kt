@@ -1,5 +1,7 @@
-package infra
+package infra.consumer
 
+import infra.dispatcher.GsonSerializer
+import infra.dispatcher.KafkaDispatcher
 import model.Message
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord

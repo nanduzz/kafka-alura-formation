@@ -1,4 +1,4 @@
-import infra.KafkaService
+import infra.consumer.KafkaService
 import model.Message
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
@@ -10,7 +10,7 @@ fun main() {
 class EmailService {
 
     fun main() {
-        KafkaService<Email>(
+        KafkaService(
             groupId = EmailService::class.java.simpleName,
             topic = "ECOMMERCE_SEND_EMAIL",
             properties = mapOf(),

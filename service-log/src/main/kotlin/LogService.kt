@@ -1,4 +1,4 @@
-import infra.KafkaService
+import infra.consumer.KafkaService
 import model.Message
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord

@@ -1,5 +1,5 @@
-import infra.KafkaDispatcher
-import infra.KafkaService
+import infra.dispatcher.KafkaDispatcher
+import infra.consumer.KafkaService
 import model.CorrelationId
 import model.Message
 import org.apache.kafka.clients.consumer.ConsumerRecord

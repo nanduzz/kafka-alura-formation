@@ -1,4 +1,4 @@
-package infra
+package infra.dispatcher
 
 import com.google.gson.*
 import model.CorrelationId

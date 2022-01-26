@@ -20,6 +20,7 @@
         <module>service-users</module>
         <module>service-reading-report</module>
         <module>service-fake-http</module>
+        <module>service-email-new-order</module>
     </modules>
 
     <properties>

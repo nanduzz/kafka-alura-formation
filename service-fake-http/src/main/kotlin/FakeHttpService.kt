@@ -1,4 +1,4 @@
-import infra.KafkaDispatcher
+import infra.dispatcher.KafkaDispatcher
 import model.CorrelationId
 
 fun main() {
