@@ -1,4 +1,5 @@
-import infra.consumer.KafkaService
+import infra.consumer.ConsumerService
+import infra.consumer.ServiceRunner
 import model.Message
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import java.io.File
@@ -8,24 +9,17 @@ fun main() {
     ReadingReportService().main()
 }
 
-class ReadingReportService {
+class ReadingReportService : ConsumerService<User> {
 
-    companion object{
+    companion object {
         val SOURCE = File("src/main/resources/report.txt")
     }
 
     fun main() {
-        KafkaService(
-            groupId = ReadingReportService::class.java.simpleName,
-            topic = "ECOMMERCE_USER_GENERATE_READING_REPORT",
-            properties = mapOf(),
-            consume = ::parse
-        ).use {
-            it.execute()
-        }
+        ServiceRunner(::ReadingReportService).start(3)
     }
 
-    private fun parse(record: ConsumerRecord<String, Message<User>>) {
+    override fun parse(record: ConsumerRecord<String, Message<User>>) {
         try {
             println("------------------")
             println("Processing report for ${record.value()}")
@@ -36,9 +30,17 @@ class ReadingReportService {
             IO.append(target, "created for ${user.id}")
 
             println("File created: ${target.absolutePath}")
-        }catch (e : Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    override fun getTopic(): String {
+        return "ECOMMERCE_USER_GENERATE_READING_REPORT"
+    }
+
+    override fun getConsumerGroup(): String {
+        return ReadingReportService::class.java.simpleName
     }
 
 }

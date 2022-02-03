@@ -1,4 +1,8 @@
+package br.com.example.kafkaalura
+
+import infra.consumer.ConsumerService
 import infra.consumer.KafkaService
+import infra.consumer.ServiceRunner
 import infra.dispatcher.KafkaDispatcher
 import model.Message
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -9,22 +13,15 @@ fun main() {
     fraudDetectorService.main()
 }
 
-class EmailNewOrderService {
+class EmailNewOrderService : ConsumerService<Order> {
 
     private val emailDispatcher = KafkaDispatcher<Email>()
 
     fun main() {
-        KafkaService(
-            groupId = EmailNewOrderService::class.java.simpleName,
-            topic = Pattern.compile("ECOMMERCE_NEW_ORDER"),
-            properties = mapOf(),
-            consume = ::parse
-        ).use {
-            it.execute()
-        }
+        ServiceRunner(::EmailNewOrderService).start(1)
     }
 
-    private fun parse(record: ConsumerRecord<String, Message<Order>>) {
+    override fun parse(record: ConsumerRecord<String, Message<Order>>) {
         println("------------------")
         println("Processing new order, preparing email")
 
@@ -38,6 +35,14 @@ class EmailNewOrderService {
             id = message.id.continueWith(EmailNewOrderService::class.java.simpleName),
             payload = Email(order.email, emailCode)
         )
+    }
+
+    override fun getTopic(): String {
+        return "ECOMMERCE_NEW_ORDER"
+    }
+
+    override fun getConsumerGroup(): String {
+        return "4" + EmailNewOrderService::class.java.simpleName
     }
 
 }

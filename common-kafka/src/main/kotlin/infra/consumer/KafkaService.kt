@@ -53,7 +53,7 @@ class KafkaService<T> private constructor(
                         this.consume(record)
                     } catch (e: RuntimeException) {
                         //so far, just logging
-                        e.printStackTrace()
+                       // e.printStackTrace()
                         val message: Message<*> = record.value()
                         deadLetter.dispatch(
                             "ECOMMERCE_DEADLETTER",
@@ -75,6 +75,7 @@ class KafkaService<T> private constructor(
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, GsonDeserializer::class.java.name)
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId)
         properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1")
+        properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
         properties.putAll(overrideProperties)
 
         return properties

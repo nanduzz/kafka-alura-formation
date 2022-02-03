@@ -1,4 +1,5 @@
-import infra.consumer.KafkaService
+import infra.consumer.ConsumerService
+import infra.consumer.ServiceRunner
 import model.Message
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
@@ -7,20 +8,25 @@ fun main() {
     emailService.main()
 }
 
-class EmailService {
+class EmailService : ConsumerService<Email> {
 
-    fun main() {
-        KafkaService(
-            groupId = EmailService::class.java.simpleName,
-            topic = "ECOMMERCE_SEND_EMAIL",
-            properties = mapOf(),
-            consume = ::parse
-        ).use {
-            it.execute()
-        }
+    companion object {
+        const val THREADS = 5
     }
 
-    private fun parse(record: ConsumerRecord<String, Message<Email>>) {
+    fun main() {
+        ServiceRunner(::EmailService).start(THREADS)
+    }
+
+    override fun getConsumerGroup(): String {
+        return EmailService::class.java.simpleName
+    }
+
+    override fun getTopic(): String {
+        return "ECOMMERCE_SEND_EMAIL"
+    }
+
+    override fun parse(record: ConsumerRecord<String, Message<Email>>) {
         println("Processing new order, checking for fraud")
         println(record.key())
         println(record.value())
